@@ -19,6 +19,9 @@ if [[ -f "$CURRENT_PATH/package.json" ]]; then
     }
   " 2>/dev/null)
 
+  # Add fixed command
+  scripts="claude"$'\n'"$scripts"
+
   if [[ -z "$scripts" ]]; then
     echo "No scripts found in package.json" | fzf --ansi --reverse \
       --height=20% \
@@ -43,14 +46,19 @@ if [[ -f "$CURRENT_PATH/package.json" ]]; then
     awk -F$'\t' '{print $1}')
 
   if [[ -n "$selected" ]]; then
-    tmux new-window -n "npm run $selected" -c "$CURRENT_PATH" "npm run $selected; exec $SHELL"
+    if [[ "$selected" == "claude" ]]; then
+      tmux new-window -n "claude" -c "$CURRENT_PATH" "claude --dangerously-skip-permissions; exec $SHELL"
+    else
+      tmux new-window -n "npm run $selected" -c "$CURRENT_PATH" "npm run $selected; exec $SHELL"
+    fi
   fi
 
 elif [[ -f "$CURRENT_PATH/Cargo.toml" ]]; then
   PROJECT_TYPE="rust"
 
   # Common cargo commands
-  scripts="build
+  scripts="claude
+build
 run
 test
 check
@@ -67,16 +75,25 @@ build --release"
     --color='header:italic,prompt:cyan,pointer:green')
 
   if [[ -n "$selected" ]]; then
-    tmux new-window -n "cargo $selected" -c "$CURRENT_PATH" "cargo $selected; exec $SHELL"
+    if [[ "$selected" == "claude" ]]; then
+      tmux new-window -n "claude" -c "$CURRENT_PATH" "claude --dangerously-skip-permissions; exec $SHELL"
+    else
+      tmux new-window -n "cargo $selected" -c "$CURRENT_PATH" "cargo $selected; exec $SHELL"
+    fi
   fi
 
 else
-  echo "No supported project found (package.json or Cargo.toml)
-in: $CURRENT_PATH" | fzf --ansi --reverse \
+  # No project detected, still offer claude
+  scripts="claude"
+
+  selected=$(echo "$scripts" | fzf --ansi --reverse \
     --height=100% \
     --border=rounded \
-    --prompt='Press ESC to exit > ' \
+    --prompt='commands > ' \
     --pointer='►' \
-    --color='header:italic,prompt:red,pointer:green'
-  exit 1
+    --color='header:italic,prompt:cyan,pointer:green')
+
+  if [[ -n "$selected" ]]; then
+    tmux new-window -n "claude" -c "$CURRENT_PATH" "claude --dangerously-skip-permissions; exec $SHELL"
+  fi
 fi
